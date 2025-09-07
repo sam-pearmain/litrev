@@ -6,6 +6,7 @@ pub enum ParseError {
     InvalidEntryType { recieved: String }, 
     EmptyBibliography,
     UnexpectedEOF, 
+    InvalidValue, 
 }
 
 impl std::fmt::Display for ParseError {
@@ -22,6 +23,9 @@ impl std::fmt::Display for ParseError {
             }
             Self::UnexpectedEOF => {
                 write!(f, "unexpected eof")
+            }
+            Self::InvalidValue => {
+                write!(f, "invalid value within one of the entry fields given")
             }
         }
     }
@@ -69,8 +73,11 @@ impl BibtexEntryKind {
 
 #[derive(Debug, PartialEq)]
 struct BibtexEntry {
+    /// The kind of entry
     pub kind: BibtexEntryKind, 
+    /// The key for the entry, for example: Anderson2004
     pub citekey: String, 
+    /// The fields of the entry
     pub fields: HashMap<String, String>
 }
 
@@ -120,16 +127,110 @@ impl<'a> BibtexParser<'a> {
 
     /// Parces a BibTeX entry
     fn parse_entry(&mut self) -> Result<BibtexEntry, ParseError> {
-        self.consume_char(b'@')?; 
-        let entry_type_str = self.consume_identifier();
-        let entry_type = BibtexEntryKind::from_str(&entry_type_str)
-            .ok_or(ParseError::InvalidEntryType{ recieved: entry_type_str })?;
-        todo!()
+        self.consume_char(b'@')?; // jump to the next entry
+        let entry_kind_str = self.consume_identifier();
+        let entry_kind = BibtexEntryKind::from_str(&entry_kind_str)
+            .ok_or(ParseError::InvalidEntryType{ recieved: entry_kind_str })?;
+
+            
+        self.consume_char(b'{')?; // jump inside the braces
+        let citekey = self.consume_identifier();
+        self.consume_char(b',')?;
+
+        let mut fields = HashMap::new();
+        loop {
+            self.consume_whitespace();
+            if self.peek() == Some(b'}') {
+                // we are at the end of the entry
+                break;
+            }
+
+            let (key, value) = self.parse_field()?;
+            fields.insert(key, value);
+
+            self.consume_whitespace();
+            if self.peek() == Some(b',') {
+                self.advance();
+            } else if self.peek() != Some(b'}') {
+                let recieved = self.peek().map(|b| b as char).unwrap_or(' ');
+                return Err(ParseError::UnexpectedCharacter { expected: '}', recieved })
+            }
+        }
+
+        self.consume_char(b'}')?;
+
+        let entry = BibtexEntry { 
+            kind: entry_kind, 
+            citekey, 
+            fields, 
+        };
+        Ok(entry)
     }
 
-    /// Parces a BibTeX field
-    fn parse_field(&mut self) -> (String, String) {
-        todo!()
+    /// Parses a BibTeX field
+    fn parse_field(&mut self) -> Result<(String, String), ParseError> {
+        let key = self.consume_identifier();
+        self.consume_char(b'=')?;
+        let value = self.parse_value()?;
+        Ok((key, value))
+    }
+
+    /// Parses a the value of some field 
+    fn parse_value(&mut self) -> Result<String, ParseError> {
+        self.consume_whitespace();
+        match self.peek() {
+            Some(b'{') => self.consume_braced_string(),
+            Some(b'"') => self.consume_quoted_string(), 
+            Some(c) if c.is_ascii_digit() => Ok(self.consume_identifier()), 
+            _ => Err(ParseError::InvalidValue), 
+        }
+    }
+
+    /// Consume a braced string
+    fn consume_braced_string(&mut self) -> Result<String, ParseError> {
+        self.consume_char(b'{')?;
+        let start = self.cursor;
+        let mut brace_level = 1;
+
+        while let Some(byte) = self.peek() {
+            if byte == b'{' {
+                brace_level += 1;
+            } else if byte == b'}' {
+                brace_level -= 1;
+                if brace_level == 0 {
+                    break;
+                }
+            }
+            self.advance();
+        }
+
+        if brace_level != 0 {
+            return Err(ParseError::UnexpectedEOF);
+        }
+
+        let value = String::from_utf8_lossy(&self.input[start..self.cursor]).to_string();
+        self.advance();
+        Ok(value)
+    }
+
+    fn consume_quoted_string(&mut self) -> Result<String, ParseError> {
+        self.consume_char(b'"')?;
+        let start = self.cursor;
+
+        while let Some(byte) = self.peek() {
+            if byte == b'"' {
+                break;
+            }
+            self.advance();
+        }
+
+        if self.peek() != Some(b'"') {
+            return Err(ParseError::UnexpectedEOF);
+        }
+
+        let value = String::from_utf8_lossy(&self.input[start..self.cursor]).to_string();
+        self.advance();
+        Ok(value)
     }
 
     fn consume_char(&mut self, expected: u8) -> Result<(), ParseError> {
@@ -175,29 +276,66 @@ impl<'a> BibtexParser<'a> {
             }
         }
     }
-
-    /// Consumes until a certain character is reached
-    fn consume_until(&mut self, character: u8) -> Result<(), ParseError> {
-        while let Some(byte) = self.peek() {
-            if byte == character {
-                self.advance();
-                return Ok(());
-            }
-        }
-        Err(ParseError::UnexpectedEOF)
-    }
-
-    /// Go to the next line
-    fn next_line(&mut self) -> Result<(), ParseError> {
-        self.consume_until(b'\n')
-    }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
 
     #[test]
-    fn test() {
-        assert_eq!(b' '.is_ascii_alphanumeric(), false);
+    fn test_simple_article() {
+        let input = r#"
+            @article{test_key,
+                author = {Author, A.},
+                title = "A Test Title",
+                year = 2025,
+                journal = "Journal of Tests"
+            }
+        "#;
+
+        let mut parser = BibtexParser::new(input);
+        let result = parser.parse().unwrap();
+        
+        assert_eq!(result.len(), 1);
+        let entry = &result[0];
+
+        assert_eq!(entry.kind, BibtexEntryKind::Article);
+        assert_eq!(entry.citekey, "test_key");
+        assert_eq!(entry.fields.get("author").unwrap(), "Author, A.");
+        assert_eq!(entry.fields.get("title").unwrap(), "A Test Title");
+        assert_eq!(entry.fields.get("year").unwrap(), "2025");
+        assert_eq!(entry.fields.get("journal").unwrap(), "Journal of Tests");
+    }
+
+    #[test]
+    fn test_multiple_entries() {
+        let input = r#"
+            @article{key1, title = "Title 1"}
+            @book{key2, title = "Title 2", author={Author B}}
+        "#;
+        let mut parser = BibtexParser::new(input);
+        let result = parser.parse().unwrap();
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].citekey, "key1");
+        assert_eq!(result[0].kind, BibtexEntryKind::Article);
+        assert_eq!(result[1].citekey, "key2");
+        assert_eq!(result[1].kind, BibtexEntryKind::Book);
+        assert_eq!(result[1].fields.get("author").unwrap(), "Author B");
+    }
+
+    #[test]
+    fn test_nested_braces() {
+         let input = r#"
+            @misc{nested,
+                title = {A Title with {Nested Braces} is Cool},
+            }
+        "#;
+        let mut parser = BibtexParser::new(input);
+        let result = parser.parse().unwrap();
+        
+        assert_eq!(result.len(), 1);
+        let entry = &result[0];
+        assert_eq!(entry.fields.get("title").unwrap(), "A Title with {Nested Braces} is Cool");
     }
 }
