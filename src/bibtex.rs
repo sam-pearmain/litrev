@@ -266,13 +266,25 @@ impl<'a> BibtexParser<'a> {
         String::from_utf8_lossy(&self.input[start..self.cursor]).to_string()
     }
 
-    /// Consumes whitespace characters
+    /// Consumes whitespace characters as well as inline comments
     fn consume_whitespace(&mut self) {
-        while let Some(byte) = self.peek() {
-            if byte.is_ascii_whitespace() {
-                self.advance();
-            } else {
-                break;
+        loop {
+            match self.peek() {
+                Some(b'%') => {
+                    while let Some(byte) = self.peek() {
+                        if byte == b'\n' {
+                            break;
+                        }
+                        self.advance();
+                    }
+                }
+                Some(byte) if byte.is_ascii_whitespace() => {
+                    self.advance();
+                }
+                _ => {
+                    // neither a comment or whitespace
+                    break;
+                }
             }
         }
     }
@@ -287,9 +299,9 @@ mod tests {
         let input = r#"
             @article{test_key,
                 author = {Author, A.},
-                title = "A Test Title",
+                title = "A Test Title", % This is an inline comment
                 year = 2025,
-                journal = "Journal of Tests"
+                journal = "Journal of Tests", 
             }
         "#;
 
