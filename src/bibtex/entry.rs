@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use super::fields::*;
 
 #[derive(Debug, PartialEq)]
@@ -10,12 +8,12 @@ pub enum BibTeXEntryKind {
 }
 
 impl BibTeXEntryKind {
-    fn from_str(s: &str) -> Self {
+    pub fn from_str(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "article"       => Self::Article, 
             "book"          => Self::Book, 
             "booklet"       => Self::Booklet,
-            "conference"    => Self::InProceedings,
+            "conference"    => Self::Conference,
             "inbook"        => Self::Inbook,
             "incollection"  => Self::InCollection,
             "inproceedings" => Self::InProceedings,
@@ -28,6 +26,32 @@ impl BibTeXEntryKind {
             "unpublished"   => Self::Unpublished,
             _               => Self::Unknown,
         }
+    }
+
+    pub fn to_str(&self) -> &'static str {
+        match self {
+            Self::Article       => "article", 
+            Self::Book          => "book",  
+            Self::Booklet       => "booklet", 
+            Self::Conference    => "conference", 
+            Self::Inbook        => "inbook",
+            Self::InCollection  => "incollection", 
+            Self::InProceedings => "inproceedings", 
+            Self::Manual        => "manual", 
+            Self::MasterThesis  => "masterthesis", 
+            Self::Misc          => "misc", 
+            Self::PhdThesis     => "phdthesis", 
+            Self::Proceedings   => "proceedings", 
+            Self::TechReport    => "techreport", 
+            Self::Unpublished   => "unpublished", 
+            Self::Unknown       => "unknown", 
+        }
+    }
+}
+
+impl std::fmt::Display for BibTeXEntryKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_str())
     }
 }
 
@@ -91,5 +115,11 @@ impl BibTeXEntry {
 
     pub fn date(&self) -> Option<Date> {
         todo!()
+    }
+}
+
+impl std::fmt::Display for BibTeXEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "@{}{{{}", self.kind, self.citekey)?;
     }
 }

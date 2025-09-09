@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use super::entry::{BibTeXEntry, BibTeXEntryKind};
-use super::error::ParseError;
-use super::fields::{Author, Authors, BibTeXField, Value};
+use super::error::{ParseError};
+use super::fields::{Author, Authors};
+
 
 pub struct BibTeXParser<'a> {
     /// The raw UTF-8 input slice from a BibTeX file
@@ -82,7 +82,7 @@ impl<'a> BibTeXParser<'a> {
 
         let entry = BibTeXEntry { 
             kind: entry_kind, 
-            citekey,
+            citekey, 
             fields, 
         };
         Ok(entry)
@@ -100,7 +100,7 @@ impl<'a> BibTeXParser<'a> {
             "day" => self.parse_day(), 
             "month" => self.parse_month(), 
             "year" => self.parse_year(), 
-        }?; 
+        }?;
 
         Ok((key, value))
     }
@@ -191,7 +191,7 @@ impl<'a> BibTeXParser<'a> {
         }
     }
 
-    /// Consumes everything until we reach a certain character, returning a String of everything consumed
+    /// Consumes all proceeding alphanumeric characters
     fn consume_identifier(&mut self) -> String {
         let start = self.cursor;
 
@@ -236,14 +236,14 @@ mod tests {
 
     #[test]
     fn test_simple_article() {
-        let input = r#""
+        let input = r#"
             @article{test_key,
                 author = {Author, A.},
                 title = "A Test Title", % This is an inline comment
                 year = 2025,
                 journal = "Journal of Tests", 
             }
-        ""#;
+        "#;
 
         let mut parser = BibTeXParser::new(input);
         let result = parser.parse().unwrap();
@@ -261,10 +261,10 @@ mod tests {
 
     #[test]
     fn test_multiple_entries() {
-        let input = r#""
+        let input = r#"
             @article{key1, title = "Title 1"}
             @book{key2, title = "Title 2", author={Author B}}
-        ""#;
+        "#;
         let mut parser = BibTeXParser::new(input);
         let result = parser.parse().unwrap();
 
@@ -278,11 +278,11 @@ mod tests {
 
     #[test]
     fn test_nested_braces() {
-         let input = r#""
+         let input = r#"
             @misc{nested,
                 title = {A Title with {Nested Braces} is Cool},
             }
-        ""#;
+        "#;
         let mut parser = BibTeXParser::new(input);
         let result = parser.parse().unwrap();
         
