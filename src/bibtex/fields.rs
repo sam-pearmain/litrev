@@ -1,4 +1,4 @@
-
+use super::parser::BibTeXParser;
 
 #[derive(Debug, PartialEq)]
 pub struct Author {
@@ -12,12 +12,6 @@ pub struct Author {
 #[derive(Debug)]
 pub struct Authors {
     authors: Vec<Author>, 
-}
-
-impl Author {
-    fn parse() -> Self {
-        
-    }
 }
 
 #[derive(Debug, PartialEq)]

@@ -5,13 +5,13 @@ use super::fields::{Author, Authors};
 
 
 #[derive(Debug, PartialEq)]
-enum BibtexEntryKind {
+pub enum BibTeXEntryKind {
     Article, Book, Booklet, Conference, Inbook, InCollection, 
     InProceedings, Manual, MasterThesis, Misc, PhdThesis,
     Proceedings, TechReport, Unpublished, Unknown   
 }
 
-impl BibtexEntryKind {
+impl BibTeXEntryKind {
     fn from_str(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "article"       => Self::Article, 
@@ -33,40 +33,99 @@ impl BibtexEntryKind {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub enum BibTeXField {
+    Address, Annote, Author, Booktitle, Chapter, Crossref, 
+    Doi, Edition, Editor, Email, HowPublished, Institution, 
+    Journal, Day, Month, Year, Note, Number, Organization, 
+    Pages, Publisher, School, Series, Title, Type, Volume,
+    NonStandard(String), 
+} 
+
+impl BibTeXField {
+    pub fn from_str(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "address"      => Self::Address,
+            "annote"       => Self::Annote,
+            "author"       => Self::Author,
+            "booktitle"    => Self::Booktitle,
+            "chapter"      => Self::Chapter,
+            "crossref"     => Self::Crossref,
+            "doi"          => Self::Doi,
+            "edition"      => Self::Edition,
+            "editor"       => Self::Editor,
+            "email"        => Self::Email,
+            "howpublished" => Self::HowPublished,
+            "institution"  => Self::Institution,
+            "journal"      => Self::Journal,
+            "day"          => Self::Day,
+            "month"        => Self::Month,
+            "year"         => Self::Year,
+            "note"         => Self::Note,
+            "number"       => Self::Number,
+            "organization" => Self::Organization,
+            "pages"        => Self::Pages,
+            "publisher"    => Self::Publisher,
+            "school"       => Self::School,
+            "series"       => Self::Series,
+            "title"        => Self::Title,
+            "type"         => Self::Type,
+            "volume"       => Self::Volume,
+            _              => Self::NonStandard(s.to_string()),
+        }
+    }
+
+    pub fn from_string(s: String) -> Self {
+        Self::from_str(s.to_lowercase().as_str())
+    }
+
+    pub fn is_standard_field(&self) -> bool {
+        match self {
+            Self::NonStandard(_) => true, 
+            _                    => false,
+        }
+    }
+
+    pub fn is_non_standard_field(&self) -> bool {
+        !self.is_standard_field()
+    }
+}
+
+
 #[derive(Debug, PartialEq)]
-struct BibtexEntry {
+struct BibTeXEntry {
     /// The kind of entry
-    pub kind: BibtexEntryKind, 
+    pub kind: BibTeXEntryKind, 
     /// The key for the entry, for example: Anderson2004
     pub citekey: String, 
     /// The fields of the entry
-    pub fields: HashMap<String, String>
+    pub fields: HashMap<BibTeXField, String>
 }
 
-struct BibtexParser<'a> {
+pub struct BibTeXParser<'a> {
     /// The raw UTF-8 input slice from a BibTeX file
     input: &'a [u8],
     /// The cursor position 
     cursor: usize,
 }
 
-impl<'a> BibtexParser<'a> {
-    fn new(input: &'a str) -> Self {
-        BibtexParser { 
+impl<'a> BibTeXParser<'a> {
+    pub fn new(input: &'a str) -> Self {
+        BibTeXParser { 
             input: input.as_bytes(), 
             cursor: 0 
         }
     }
 
     /// Parses the entire input slice
-    pub fn parse(&mut self) -> Result<Vec<BibtexEntry>, ParseError> {
+    pub fn parse(&mut self) -> Result<Vec<BibTeXEntry>, ParseError> {
         self.consume_whitespace();
         
         if self.peek().is_none() {
             return Err(ParseError::EmptyBibliography);
         }
         
-        let mut entries: Vec<BibtexEntry> = Vec::new();
+        let mut entries: Vec<BibTeXEntry> = Vec::new();
 
         while self.peek().is_some() {
             let entry = self.parse_entry()?;
@@ -88,13 +147,11 @@ impl<'a> BibtexParser<'a> {
     }
 
     /// Parces a BibTeX entry
-    fn parse_entry(&mut self) -> Result<BibtexEntry, ParseError> {
+    fn parse_entry(&mut self) -> Result<BibTeXEntry, ParseError> {
         self.consume_char(b'@')?; // jump to the next entry
         let entry_kind_str = self.consume_identifier();
-        let entry_kind = BibtexEntryKind::from_str(&entry_kind_str)
-            .ok_or(ParseError::InvalidEntryType{ recieved: entry_kind_str })?;
+        let entry_kind = BibTeXEntryKind::from_str(&entry_kind_str);
 
-            
         self.consume_char(b'{')?; // jump inside the braces
         let citekey = self.consume_identifier();
         self.consume_char(b',')?;
@@ -121,7 +178,7 @@ impl<'a> BibtexParser<'a> {
 
         self.consume_char(b'}')?;
 
-        let entry = BibtexEntry { 
+        let entry = BibTeXEntry { 
             kind: entry_kind, 
             citekey, 
             fields, 
@@ -133,7 +190,16 @@ impl<'a> BibtexParser<'a> {
     fn parse_field(&mut self) -> Result<(String, String), ParseError> {
         let key = self.consume_identifier();
         self.consume_char(b'=')?;
-        let value = self.parse_value()?;
+        
+        let value = match key.to_lowercase().as_str() {
+            "author" => self.parse_authors(),
+            "doi" => self.parse_doi(), 
+            "pages" => self.parse_pages(), 
+            "day" => self.parse_day(), 
+            "month" => self.parse_month(), 
+            "year" => self.parse_year(), 
+        }?;
+
         Ok((key, value))
     }
 
@@ -277,13 +343,13 @@ mod tests {
             }
         "#;
 
-        let mut parser = BibtexParser::new(input);
+        let mut parser = BibTeXParser::new(input);
         let result = parser.parse().unwrap();
         
         assert_eq!(result.len(), 1);
         let entry = &result[0];
 
-        assert_eq!(entry.kind, BibtexEntryKind::Article);
+        assert_eq!(entry.kind, BibTeXEntryKind::Article);
         assert_eq!(entry.citekey, "test_key");
         assert_eq!(entry.fields.get("author").unwrap(), "Author, A.");
         assert_eq!(entry.fields.get("title").unwrap(), "A Test Title");
@@ -297,14 +363,14 @@ mod tests {
             @article{key1, title = "Title 1"}
             @book{key2, title = "Title 2", author={Author B}}
         "#;
-        let mut parser = BibtexParser::new(input);
+        let mut parser = BibTeXParser::new(input);
         let result = parser.parse().unwrap();
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].citekey, "key1");
-        assert_eq!(result[0].kind, BibtexEntryKind::Article);
+        assert_eq!(result[0].kind, BibTeXEntryKind::Article);
         assert_eq!(result[1].citekey, "key2");
-        assert_eq!(result[1].kind, BibtexEntryKind::Book);
+        assert_eq!(result[1].kind, BibTeXEntryKind::Book);
         assert_eq!(result[1].fields.get("author").unwrap(), "Author B");
     }
 
@@ -315,7 +381,7 @@ mod tests {
                 title = {A Title with {Nested Braces} is Cool},
             }
         "#;
-        let mut parser = BibtexParser::new(input);
+        let mut parser = BibTeXParser::new(input);
         let result = parser.parse().unwrap();
         
         assert_eq!(result.len(), 1);
