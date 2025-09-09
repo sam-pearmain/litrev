@@ -1,106 +1,8 @@
 use std::collections::HashMap;
 
-use super::error::{ParseError};
-use super::fields::{Author, Authors};
-
-
-#[derive(Debug, PartialEq)]
-pub enum BibTeXEntryKind {
-    Article, Book, Booklet, Conference, Inbook, InCollection, 
-    InProceedings, Manual, MasterThesis, Misc, PhdThesis,
-    Proceedings, TechReport, Unpublished, Unknown   
-}
-
-impl BibTeXEntryKind {
-    fn from_str(s: &str) -> Self {
-        match s.to_lowercase().as_str() {
-            "article"       => Self::Article, 
-            "book"          => Self::Book, 
-            "booklet"       => Self::Booklet,
-            "conference"    => Self::InProceedings,
-            "inbook"        => Self::Inbook,
-            "incollection"  => Self::InCollection,
-            "inproceedings" => Self::InProceedings,
-            "manual"        => Self::Manual,
-            "mastersthesis" => Self::MasterThesis,
-            "misc"          => Self::Misc,
-            "phdthesis"     => Self::PhdThesis,
-            "proceedings"   => Self::Proceedings,
-            "techreport"    => Self::TechReport,
-            "unpublished"   => Self::Unpublished,
-            _               => Self::Unknown,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub enum BibTeXField {
-    Address, Annote, Author, Booktitle, Chapter, Crossref, 
-    Doi, Edition, Editor, Email, HowPublished, Institution, 
-    Journal, Day, Month, Year, Note, Number, Organization, 
-    Pages, Publisher, School, Series, Title, Type, Volume,
-    NonStandard(String), 
-} 
-
-impl BibTeXField {
-    pub fn from_str(s: &str) -> Self {
-        match s.to_lowercase().as_str() {
-            "address"      => Self::Address,
-            "annote"       => Self::Annote,
-            "author"       => Self::Author,
-            "booktitle"    => Self::Booktitle,
-            "chapter"      => Self::Chapter,
-            "crossref"     => Self::Crossref,
-            "doi"          => Self::Doi,
-            "edition"      => Self::Edition,
-            "editor"       => Self::Editor,
-            "email"        => Self::Email,
-            "howpublished" => Self::HowPublished,
-            "institution"  => Self::Institution,
-            "journal"      => Self::Journal,
-            "day"          => Self::Day,
-            "month"        => Self::Month,
-            "year"         => Self::Year,
-            "note"         => Self::Note,
-            "number"       => Self::Number,
-            "organization" => Self::Organization,
-            "pages"        => Self::Pages,
-            "publisher"    => Self::Publisher,
-            "school"       => Self::School,
-            "series"       => Self::Series,
-            "title"        => Self::Title,
-            "type"         => Self::Type,
-            "volume"       => Self::Volume,
-            _              => Self::NonStandard(s.to_string()),
-        }
-    }
-
-    pub fn from_string(s: String) -> Self {
-        Self::from_str(s.to_lowercase().as_str())
-    }
-
-    pub fn is_standard_field(&self) -> bool {
-        match self {
-            Self::NonStandard(_) => true, 
-            _                    => false,
-        }
-    }
-
-    pub fn is_non_standard_field(&self) -> bool {
-        !self.is_standard_field()
-    }
-}
-
-
-#[derive(Debug, PartialEq)]
-struct BibTeXEntry {
-    /// The kind of entry
-    pub kind: BibTeXEntryKind, 
-    /// The key for the entry, for example: Anderson2004
-    pub citekey: String, 
-    /// The fields of the entry
-    pub fields: HashMap<BibTeXField, String>
-}
+use super::entry::{BibTeXEntry, BibTeXEntryKind};
+use super::error::ParseError;
+use super::fields::{Author, Authors, BibTeXField, Value};
 
 pub struct BibTeXParser<'a> {
     /// The raw UTF-8 input slice from a BibTeX file
@@ -180,7 +82,7 @@ impl<'a> BibTeXParser<'a> {
 
         let entry = BibTeXEntry { 
             kind: entry_kind, 
-            citekey, 
+            citekey,
             fields, 
         };
         Ok(entry)
@@ -198,7 +100,7 @@ impl<'a> BibTeXParser<'a> {
             "day" => self.parse_day(), 
             "month" => self.parse_month(), 
             "year" => self.parse_year(), 
-        }?;
+        }?; 
 
         Ok((key, value))
     }
@@ -334,14 +236,14 @@ mod tests {
 
     #[test]
     fn test_simple_article() {
-        let input = r#"
+        let input = r#""
             @article{test_key,
                 author = {Author, A.},
                 title = "A Test Title", % This is an inline comment
                 year = 2025,
                 journal = "Journal of Tests", 
             }
-        "#;
+        ""#;
 
         let mut parser = BibTeXParser::new(input);
         let result = parser.parse().unwrap();
@@ -359,10 +261,10 @@ mod tests {
 
     #[test]
     fn test_multiple_entries() {
-        let input = r#"
+        let input = r#""
             @article{key1, title = "Title 1"}
             @book{key2, title = "Title 2", author={Author B}}
-        "#;
+        ""#;
         let mut parser = BibTeXParser::new(input);
         let result = parser.parse().unwrap();
 
@@ -376,11 +278,11 @@ mod tests {
 
     #[test]
     fn test_nested_braces() {
-         let input = r#"
+         let input = r#""
             @misc{nested,
                 title = {A Title with {Nested Braces} is Cool},
             }
-        "#;
+        ""#;
         let mut parser = BibTeXParser::new(input);
         let result = parser.parse().unwrap();
         
