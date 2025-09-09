@@ -1,26 +1,23 @@
 
-pub enum Suffix {
-
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Name {
-    name: String, 
-    is_forename: bool, 
-    is_abbreviated: bool, 
-}
 
 #[derive(Debug, PartialEq)]
 pub struct Author {
-    forename: Name, 
-    surname: Name, 
-    suffix: Option<String>, 
+    forename: String, 
+    surname: String, 
+    suffix: Option<String>,
+    prefix: Option<String>,  
     is_lead_author: bool, 
 }
 
 #[derive(Debug)]
 pub struct Authors {
     authors: Vec<Author>, 
+}
+
+impl Author {
+    fn parse() -> Self {
+        
+    }
 }
 
 #[derive(Debug, PartialEq)]
