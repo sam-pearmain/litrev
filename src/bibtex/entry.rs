@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use super::fields::*;
 
 #[derive(Debug, PartialEq)]
@@ -7,24 +9,26 @@ pub enum BibTeXEntryKind {
     Proceedings, TechReport, Unpublished, Unknown   
 }
 
-impl BibTeXEntryKind {
-    pub fn from_str(s: &str) -> Self {
+impl FromStr for BibTeXEntryKind {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "article"       => Self::Article, 
-            "book"          => Self::Book, 
-            "booklet"       => Self::Booklet,
-            "conference"    => Self::Conference,
-            "inbook"        => Self::Inbook,
-            "incollection"  => Self::InCollection,
-            "inproceedings" => Self::InProceedings,
-            "manual"        => Self::Manual,
-            "mastersthesis" => Self::MasterThesis,
-            "misc"          => Self::Misc,
-            "phdthesis"     => Self::PhdThesis,
-            "proceedings"   => Self::Proceedings,
-            "techreport"    => Self::TechReport,
-            "unpublished"   => Self::Unpublished,
-            _               => Self::Unknown,
+            "article"       => Ok(Self::Article), 
+            "book"          => Ok(Self::Book), 
+            "booklet"       => Ok(Self::Booklet),
+            "conference"    => Ok(Self::Conference),
+            "inbook"        => Ok(Self::Inbook),
+            "incollection"  => Ok(Self::InCollection),
+            "inproceedings" => Ok(Self::InProceedings),
+            "manual"        => Ok(Self::Manual),
+            "mastersthesis" => Ok(Self::MasterThesis),
+            "misc"          => Ok(Self::Misc),
+            "phdthesis"     => Ok(Self::PhdThesis),
+            "proceedings"   => Ok(Self::Proceedings),
+            "techreport"    => Ok(Self::TechReport),
+            "unpublished"   => Ok(Self::Unpublished),
+            _               => Ok(Self::Unknown),
         }
     }
 }
@@ -116,6 +120,8 @@ impl BibTeXEntry {
 
 impl std::fmt::Display for BibTeXEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "@{}{{{}", self.kind, self.citekey)?;
+        writeln!(f, "@{}{{{}", self.kind, self.citekey)
+
+        todo!()
     }
 }

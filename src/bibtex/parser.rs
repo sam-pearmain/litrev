@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use super::error::{ParseError};
+use super::error::ParseError;
+use super::entry::BibTeXEntry;
 use super::fields::{Author, Authors};
 
 
