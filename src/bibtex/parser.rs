@@ -1,44 +1,34 @@
 use std::collections::HashMap;
 
-use super::error::*;
+use super::error::{ParseError};
+use super::fields::{Author, Authors};
 
 
 #[derive(Debug, PartialEq)]
 enum BibtexEntryKind {
-    Article, 
-    Book,
-    Booklet, 
-    Conference, 
-    Inbook, 
-    InCollection, 
-    InProceedings, 
-    Manual, 
-    MasterThesis, 
-    Misc, 
-    PhdThesis,
-    Proceedings, 
-    TechReport, 
-    Unpublished,  
+    Article, Book, Booklet, Conference, Inbook, InCollection, 
+    InProceedings, Manual, MasterThesis, Misc, PhdThesis,
+    Proceedings, TechReport, Unpublished, Unknown   
 }
 
 impl BibtexEntryKind {
-    fn from_str(s: &str) -> Option<Self> {
+    fn from_str(s: &str) -> Self {
         match s.to_lowercase().as_str() {
-            "article"       => Some(Self::Article), 
-            "book"          => Some(Self::Book), 
-            "booklet"       => Some(Self::Booklet),
-            "conference"    => Some(Self::InProceedings),
-            "inbook"        => Some(Self::Inbook),
-            "incollection"  => Some(Self::InCollection),
-            "inproceedings" => Some(Self::InProceedings),
-            "manual"        => Some(Self::Manual),
-            "mastersthesis" => Some(Self::MasterThesis),
-            "misc"          => Some(Self::Misc),
-            "phdthesis"     => Some(Self::PhdThesis),
-            "proceedings"   => Some(Self::Proceedings),
-            "techreport"    => Some(Self::TechReport),
-            "unpublished"   => Some(Self::Unpublished),
-            _ => None,
+            "article"       => Self::Article, 
+            "book"          => Self::Book, 
+            "booklet"       => Self::Booklet,
+            "conference"    => Self::InProceedings,
+            "inbook"        => Self::Inbook,
+            "incollection"  => Self::InCollection,
+            "inproceedings" => Self::InProceedings,
+            "manual"        => Self::Manual,
+            "mastersthesis" => Self::MasterThesis,
+            "misc"          => Self::Misc,
+            "phdthesis"     => Self::PhdThesis,
+            "proceedings"   => Self::Proceedings,
+            "techreport"    => Self::TechReport,
+            "unpublished"   => Self::Unpublished,
+            _               => Self::Unknown,
         }
     }
 }
@@ -156,6 +146,16 @@ impl<'a> BibtexParser<'a> {
             Some(c) if c.is_ascii_digit() => Ok(self.consume_identifier()), 
             _ => Err(ParseError::InvalidValue), 
         }
+    }
+
+    /// Parses the author/s
+    fn parse_authors(&mut self) -> Result<Authors, ParseError> {
+        todo!()
+    }
+
+    /// Parses the date
+    fn parse_date(&mut self) -> Result<Date, ParseError> {
+        todo!()
     }
 
     /// Consume a braced string
