@@ -27,31 +27,27 @@ impl BibTeXEntryKind {
             _               => Self::Unknown,
         }
     }
-
-    pub fn to_str(&self) -> &'static str {
-        match self {
-            Self::Article       => "article", 
-            Self::Book          => "book",  
-            Self::Booklet       => "booklet", 
-            Self::Conference    => "conference", 
-            Self::Inbook        => "inbook",
-            Self::InCollection  => "incollection", 
-            Self::InProceedings => "inproceedings", 
-            Self::Manual        => "manual", 
-            Self::MasterThesis  => "masterthesis", 
-            Self::Misc          => "misc", 
-            Self::PhdThesis     => "phdthesis", 
-            Self::Proceedings   => "proceedings", 
-            Self::TechReport    => "techreport", 
-            Self::Unpublished   => "unpublished", 
-            Self::Unknown       => "unknown", 
-        }
-    }
 }
 
 impl std::fmt::Display for BibTeXEntryKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_str())
+        match self {
+            Self::Article       => write!(f, "article"), 
+            Self::Book          => write!(f, "book"),  
+            Self::Booklet       => write!(f, "booklet"), 
+            Self::Conference    => write!(f, "conference"), 
+            Self::Inbook        => write!(f, "inbook"),
+            Self::InCollection  => write!(f, "incollection"), 
+            Self::InProceedings => write!(f, "inproceedings"), 
+            Self::Manual        => write!(f, "manual"), 
+            Self::MasterThesis  => write!(f, "masterthesis"), 
+            Self::Misc          => write!(f, "misc"), 
+            Self::PhdThesis     => write!(f, "phdthesis"), 
+            Self::Proceedings   => write!(f, "proceedings"), 
+            Self::TechReport    => write!(f, "techreport"), 
+            Self::Unpublished   => write!(f, "unpublished"), 
+            Self::Unknown       => write!(f, "unknown"), 
+        }
     }
 }
 
