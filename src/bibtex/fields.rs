@@ -107,6 +107,20 @@ impl_try_from_for_day!(
     i8, i16, i32, i64, i128, isize
 );
 
+impl std::fmt::Display for Day {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Mon => write!(f, "monday"), 
+            Self::Tue => write!(f, "tuesday"), 
+            Self::Wed => write!(f, "wednesday"), 
+            Self::Thu => write!(f, "thursday"), 
+            Self::Fri => write!(f, "friday"), 
+            Self::Sat => write!(f, "saturday"), 
+            Self::Sun => write!(f, "sunday"),
+        }
+    }
+}
+
 pub enum Month {
     Jan, Feb, Mar, Apr, May, Jun, 
     Jul, Aug, Sep, Oct, Nov, Dec, 
