@@ -1,7 +1,7 @@
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
-    UnexpectedCharacter { expected: char, recieved: char } , 
-    InvalidEntryType { recieved: String }, 
+    UnexpectedCharacter(char), 
+    InvalidEntryKind(String), 
     EmptyBibliography,
     UnexpectedEOF, 
     InvalidValue, 
@@ -10,11 +10,11 @@ pub enum ParseError {
 impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::UnexpectedCharacter { expected, recieved } => {
-                write!(f, "unexpected character '{}'. expected '{}'", recieved, expected)
+            Self::UnexpectedCharacter(c) => {
+                write!(f, "unexpected character '{}'", c)
             }
-            Self::InvalidEntryType { recieved } => {
-                write!(f, "invalid entry type '{}'", recieved)
+            Self::InvalidEntryKind(s) => {
+                write!(f, "invalid entry type '{}'", s)
             }
             Self::EmptyBibliography => {
                 write!(f, "failed to parse BibTeX file, seemingly empty")

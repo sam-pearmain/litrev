@@ -1,11 +1,12 @@
 use std::str::FromStr; 
+use std::convert::TryFrom;
 
 use super::parser::BibTeXParser;
 
 #[derive(Debug, PartialEq)]
 pub enum BibTeXField {
-    Address(String), Annote(String), Author(Authors), Booktitle(String), 
-    Chapter(u32), Crossref(String), Doi(String), Edition(u16), Editor(Authors), 
+    Address(String), Annote(String), Author(Authors), BookTitle(String), 
+    Chapter(u8), Crossref(String), Doi(String), Edition(u16), Editor(Authors), 
     Email(String), HowPublished(String), Institution(String), Journal(String), 
     Day(u8), Month(u8), Year(u16), Note(String), Number(u16), Organization(String), 
     Pages(Pages), Publisher(String), School(String), Series(String), Title(String), 
@@ -57,6 +58,55 @@ impl std::fmt::Display for Authors {
     }
 }
 
+pub enum Day {
+    Mon, Tue, Wed, Thu, Fri, Sat, Sun,
+}
+
+impl FromStr for Day {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().trim() {
+            "1" | "mon" | "monday"    => Ok(Self::Mon), 
+            "2" | "tue" | "tuesday"   => Ok(Self::Tue), 
+            "3" | "wed" | "wednesday" => Ok(Self::Wed), 
+            "4" | "thu" | "thursday"  => Ok(Self::Thu), 
+            "5" | "fri" | "friday"    => Ok(Self::Fri), 
+            "6" | "sat" | "saturday"  => Ok(Self::Sat), 
+            "7" | "sun" | "sunday"    => Ok(Self::Sun), 
+            _ => Err(format!("invalid day string: {s}"))
+        }
+    }
+}
+
+macro_rules! impl_try_from_for_day {
+    ( $( $t:ty ),* ) => {
+        $(
+            impl TryFrom<$t> for Day {
+                type Error = String;
+
+                fn try_from(value: $t) -> Result<Self, Self::Error> {
+                    match value {
+                        1 => Ok(Day::Mon),
+                        2 => Ok(Day::Tue),
+                        3 => Ok(Day::Wed),
+                        4 => Ok(Day::Thu),
+                        5 => Ok(Day::Fri),
+                        6 => Ok(Day::Sat),
+                        7 => Ok(Day::Sun),
+                        _ => Err(format!("invalid day number: {}", value)),
+                    }
+                }
+            }
+        )*
+    };
+}
+
+impl_try_from_for_day!(
+    u8, u16, u32, u64, u128, usize,
+    i8, i16, i32, i64, i128, isize
+);
+
 pub enum Month {
     Jan, Feb, Mar, Apr, May, Jun, 
     Jul, Aug, Sep, Oct, Nov, Dec, 
@@ -79,32 +129,44 @@ impl FromStr for Month {
             "oct" | "october" | "10"  => Ok(Self::Oct),
             "nov" | "november" | "11" => Ok(Self::Nov),
             "dec" | "december" | "12" => Ok(Self::Dec),
-            _ => Err("Invalid month string".to_string()),
+            _ => Err(format!("invalid month string: {s}")),
         }
     }
 }
 
-impl TryFrom<u8> for Month {
-    type Error = String;
+macro_rules! impl_try_from_for_month {
+    ( $( $t:ty ),* ) => {
+        $(
+            impl TryFrom<$t> for Month {
+                type Error = String;
 
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            1  => Ok(Self::Jan),
-            2  => Ok(Self::Feb), 
-            3  => Ok(Self::Mar),
-            4  => Ok(Self::Apr),
-            5  => Ok(Self::May),
-            6  => Ok(Self::Jun),
-            7  => Ok(Self::Jul),
-            8  => Ok(Self::Aug),
-            9  => Ok(Self::Sep),
-            10 => Ok(Self::Oct),
-            11 => Ok(Self::Nov),
-            12 => Ok(Self::Dec),
-            _  => Err(format!("Invalid month number: {}", value)), 
-        }
-    }
+                fn try_from(value: $t) -> Result<Self, Self::Error> {
+                    match value {
+                        1 => Ok(Self::Jan),
+                        2 => Ok(Self::Feb),
+                        3 => Ok(Self::Mar),
+                        4 => Ok(Self::Apr),
+                        5 => Ok(Self::May),
+                        6 => Ok(Self::Jun),
+                        7 => Ok(Self::Jul),
+                        8 => Ok(Self::Aug),
+                        9 => Ok(Self::Sep),
+                        10 => Ok(Self::Oct),
+                        11 => Ok(Self::Nov),
+                        12 => Ok(Self::Dec),
+                        _ => Err(format!("invalid month number: {}", value)),
+                    }
+                }
+            }
+        )*
+    };
 }
+
+impl_try_from_for_month!(
+    u8, u16, u32, u64, u128, usize,
+    i8, i16, i32, i64, i128, isize
+);
+
 
 impl std::fmt::Display for Month {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
