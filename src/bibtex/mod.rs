@@ -3,5 +3,6 @@
 pub mod parser;
 pub mod entry;
 
-mod fields;
 mod error;
+mod fields;
+mod lexer;

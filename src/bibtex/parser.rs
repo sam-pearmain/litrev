@@ -1,9 +1,10 @@
 use std::collections::HashMap;
-use std::str::FromStr;
+use std::ops::Range
+
 
 use super::error::ParseError;
-use super::entry::{BibTeXEntry, BibTeXEntryKind};
-use super::fields::{Author, Authors, BibTeXField};
+use super::entry::BibTeXEntry;
+use super::fields::{Author, Authors};
 
 
 pub struct BibTeXParser<'a> {
@@ -54,14 +55,13 @@ impl<'a> BibTeXParser<'a> {
     fn parse_entry(&mut self) -> Result<BibTeXEntry, ParseError> {
         self.consume_char(b'@')?; // jump to the next entry
         let entry_kind_str = self.consume_identifier();
-        let entry_kind = BibTeXEntryKind::from_str(&entry_kind_str)?;
+        let entry_kind = BibTeXEntryKind::from_str(&entry_kind_str);
 
         self.consume_char(b'{')?; // jump inside the braces
         let citekey = self.consume_identifier();
         self.consume_char(b',')?;
 
-
-        let mut entry = BibTeXEntry::new(entry_kind, citekey);
+        let mut fields = HashMap::new();
         loop {
             self.consume_whitespace();
             if self.peek() == Some(b'}') {
@@ -69,26 +69,30 @@ impl<'a> BibTeXParser<'a> {
                 break;
             }
 
-            let field = self.parse_field()?;
-            entry.add_field(field);
+            let (key, value) = self.parse_field()?;
+            fields.insert(key, value);
 
             self.consume_whitespace();
             if self.peek() == Some(b',') {
-                // then we have another field
                 self.advance();
             } else if self.peek() != Some(b'}') {
-                todo!("this doesn't deal with potential inline comments");
-                let peeked = self.peek().map(|b| b as char).unwrap_or(' ');
-                return Err(ParseError::UnexpectedCharacter(peeked))
+                let recieved = self.peek().map(|b| b as char).unwrap_or(' ');
+                return Err(ParseError::UnexpectedCharacter { expected: '}', recieved })
             }
         }
 
         self.consume_char(b'}')?;
+
+        let entry = BibTeXEntry { 
+            kind: entry_kind, 
+            citekey, 
+            fields, 
+        };
         Ok(entry)
     }
 
     /// Parses a BibTeX field
-    fn parse_field(&mut self) -> Result<BibTeXField, ParseError> {
+    fn parse_field(&mut self) -> Result<(String, String), ParseError> {
         let key = self.consume_identifier();
         self.consume_char(b'=')?;
         
@@ -99,7 +103,6 @@ impl<'a> BibTeXParser<'a> {
             "day" => self.parse_day(), 
             "month" => self.parse_month(), 
             "year" => self.parse_year(), 
-            "url" => self.parse_url(), 
         }?;
 
         Ok((key, value))
